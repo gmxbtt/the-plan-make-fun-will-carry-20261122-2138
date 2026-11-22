@@ -1,49 +1,78 @@
 #!/usr/bin/env python3
-"""Write the 30-day $100-to-most-money plan to /output/entry.txt.
+"""Emit the 30-day $100-to-most-money plan to /output/entry.txt.
 
-The gate accepts 1-280 Unicode code points of UTF-8 text, not only
-whitespace. The plan is assembled from dated phases so each part stays
-short: one build day, then 29 days of outreach, sales and reinvestment.
+The plan is a single 276-character text. It is assembled from four
+named blocks (opening day, outreach month, money maths, closing edge),
+each built from short fragments, so the wording of every block is
+visible on its own lines. No network, no dependencies, deterministic.
 """
 
-import os
+from pathlib import Path
 
-PHASES = [
-    "Day 1: build a $49 AI invoice-chaser for plumbers on free tiers;",
-    "list on Gumroad.",
-    "Days 2-30: DM 25 trades/day on Instagram, offer $99 setup + $29/mo;",
-    "post 1 demo video/day on X.",
-    "10 sales = $990 + $290/mo.",
-    "Reinvest in $5/day ads.",
-    "Edge: sell setup and saved hours, not software.",
-]
+OUT_PATH = Path("/output/entry.txt")
+MAX_CHARS = 280
 
-DEST_DIR = "/output"
-DEST_FILE = os.path.join(DEST_DIR, "entry.txt")
-LIMIT = 280
+# Money figures: one source of truth, the money line is computed.
+PRICE_TOOL = 49        # day-1 tool price
+FEE_SETUP = 99         # setup fee per sale
+FEE_MONTHLY = 29       # monthly fee per sale
+TARGET_SALES = 10      # closes aimed for in 30 days
+DAILY_DMS = 25         # trades messaged per day
+DAILY_ADS = 5          # ad dollars per day
 
 
-def assemble(phases):
-    """Join the dated phases into the single plan text."""
-    return " ".join(phases)
+def _opening() -> str:
+    fragments = [
+        "Day 1: build a $49 AI invoice-chaser",
+        "for plumbers on free tiers;",
+        "list on Gumroad.",
+    ]
+    return " ".join(fragments)
 
 
-def check(text):
-    """The gate's rules: 1-280 code points, not whitespace-only."""
-    if not 1 <= len(text) <= LIMIT:
-        raise SystemExit(f"plan is {len(text)} chars, must be 1-{LIMIT}")
-    if not text.strip():
+def _outreach() -> str:
+    fragments = [
+        "Days 2-30: DM 25 trades/day on Instagram,",
+        "offer $99 setup + $29/mo;",
+        "post 1 demo video/day on X.",
+    ]
+    return " ".join(fragments)
+
+
+def _money() -> str:
+    upfront = TARGET_SALES * FEE_SETUP      # 990
+    recurring = TARGET_SALES * FEE_MONTHLY  # 290
+    return f"{TARGET_SALES} sales = ${upfront} + ${recurring}/mo."
+
+
+def _closing() -> str:
+    fragments = [
+        "Reinvest in $5/day ads.",
+        "Edge: sell setup and saved hours, not software.",
+    ]
+    return " ".join(fragments)
+
+
+def build_plan() -> str:
+    """Glue the four blocks into the single judged plan text."""
+    blocks = [_opening(), _outreach(), _money(), _closing()]
+    return " ".join(blocks)
+
+
+def _validate(plan: str) -> None:
+    if not 1 <= len(plan) <= MAX_CHARS:
+        raise SystemExit(f"plan is {len(plan)} chars, must be 1-{MAX_CHARS}")
+    if not plan.strip():
         raise SystemExit("plan must not be whitespace-only")
 
 
-def run():
-    text = assemble(PHASES)
-    check(text)
-    os.makedirs(DEST_DIR, exist_ok=True)
-    with open(DEST_FILE, "w", encoding="utf-8") as out:
-        out.write(text)
-    print(f"wrote {len(text)} chars to {DEST_FILE}")
+def main() -> None:
+    plan = build_plan()
+    _validate(plan)
+    OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    OUT_PATH.write_text(plan, encoding="utf-8")
+    print(f"wrote {len(plan)} chars to {OUT_PATH}")
 
 
 if __name__ == "__main__":
-    run()
+    main()
